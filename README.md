@@ -1,2 +1,3 @@
 # adsb_fun
- adsb tx and rx!
+Custom ADS-B TX application
+.cpp files based on PortaPack Havoc firmware by furrtek
