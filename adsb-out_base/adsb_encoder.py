@@ -261,8 +261,9 @@ def manchester_encode(byte):
 import numpy
 #from scipy.signal import hilbert
 
+# Even and odd arrays exist due to PPM modulation where bits are transmitted in one of TWO possible timeslots
 def df17_pos_rep_encode(ca, icao, tc, ss, nicsb, alt, time, lat, lon, surface):
-
+    
     format = 17
 
     enc_alt =	encode_alt_modes(alt, surface)
@@ -277,12 +278,17 @@ def df17_pos_rep_encode(ca, icao, tc, ss, nicsb, alt, time, lat, lon, surface):
 
     ff = 0
     df17_even_bytes = []
+    # Downlink Format 17 message | CA Transponder Capability
     df17_even_bytes.append((format<<3) | ca)
+
+    # ICAO aircraft address
     df17_even_bytes.append((icao>>16) & 0xff)
     df17_even_bytes.append((icao>> 8) & 0xff)
     df17_even_bytes.append((icao    ) & 0xff)
-    # data
+    # TC Type Code
     df17_even_bytes.append((tc<<3) | (ss<<1) | nicsb)
+
+    # ME Message
     df17_even_bytes.append((enc_alt>>4) & 0xff)
     df17_even_bytes.append((enc_alt & 0xf) << 4 | (time<<3) | (ff<<2) | (evenenclat>>15))
     df17_even_bytes.append((evenenclat>>7) & 0xff)    
@@ -292,7 +298,7 @@ def df17_pos_rep_encode(ca, icao, tc, ss, nicsb, alt, time, lat, lon, surface):
 
     df17_str = "{0:02x}{1:02x}{2:02x}{3:02x}{4:02x}{5:02x}{6:02x}{7:02x}{8:02x}{9:02x}{10:02x}".format(*df17_even_bytes[0:11])
     #print df17_str , "%X" % bin2int(crc(df17_str+"000000", encode=True)) , "%X" % get_parity(hex2bin(df17_str+"000000"), extended=True)
-    df17_crc = bin2int(crc(df17_str+"000000", encode=True))
+    df17_crc = bin2int(crc(df17_str+"000000", encode=True)) # CRC should be zero
 
     df17_even_bytes.append((df17_crc>>16) & 0xff)
     df17_even_bytes.append((df17_crc>> 8) & 0xff)
@@ -301,10 +307,12 @@ def df17_pos_rep_encode(ca, icao, tc, ss, nicsb, alt, time, lat, lon, surface):
     ff = 1
     df17_odd_bytes = []
     df17_odd_bytes.append((format<<3) | ca)
+    # ICAO aircraft address
     df17_odd_bytes.append((icao>>16) & 0xff)
     df17_odd_bytes.append((icao>> 8) & 0xff)
     df17_odd_bytes.append((icao    ) & 0xff)
-    # data
+
+    # TC Type Code
     df17_odd_bytes.append((tc<<3) | (ss<<1) | nicsb)
     df17_odd_bytes.append((enc_alt>>4) & 0xff)
     df17_odd_bytes.append((enc_alt & 0xf) << 4 | (time<<3) | (ff<<2) | (oddenclat>>15))
@@ -322,6 +330,7 @@ def df17_pos_rep_encode(ca, icao, tc, ss, nicsb, alt, time, lat, lon, surface):
     
     return (df17_even_bytes, df17_odd_bytes)
 
+# 1090MHz Extended Squitter PPM Modulator
 def frame_1090es_ppm_modulate(even, odd):
     ppm = [ ]
 
@@ -383,20 +392,27 @@ def hackrf_raw_IQ_format(ppm):
         signal.append(Q)
 
     return bytearray(signal)
+
+###############################################################
     
+# Developed by Anton Chua, Technology Lab
+# Main run function for adsb_fun
+
 if __name__ == "__main__":
 
     from sys import argv, exit
     
+    # Get user input
     argc = len(argv)
     if argc != 5:
       print
-      print 'Usage: '+ argv[0] +'  <ICAO> <Latitude> <Longitude> <Altitude>'
+      print ('Usage: '+ argv[0] +'  <ICAO> <Latitude> <Longitude> <Altitude>')
       print
-      print '    Example: '+ argv[0] +'  0xABCDEF 12.34 56.78 9999.0'
+      print ('    Example: '+ argv[0] +'  0xABCDEF 12.34 56.78 9999.0')
       print
       exit(2)
-
+    
+    # Input parse
     icao = int(argv[1], 16)
     lat = float(argv[2])
     lon = float(argv[3])
